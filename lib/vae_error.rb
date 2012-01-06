@@ -1,0 +1,2 @@
+class VaeError < StandardError
+end

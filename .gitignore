@@ -1,0 +1,5 @@
+.svn
+*/.svn
+lib/.DS_Store
+lib/bin
+lib/.sass-cache

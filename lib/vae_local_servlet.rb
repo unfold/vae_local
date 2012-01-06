@@ -1,0 +1,3 @@
+class VaeLocalServlet < Servlet
+end
+
