@@ -37,15 +37,25 @@ class VaeLocal
     }
   end
   
-  def get_svn_credentials(site)
+  def get_credentials(site)
+    credentials = {}
+
+    # Subversion
     home = Dir.chdir { Dir.pwd }
     Dir.glob("#{home}/.subversion/auth/svn.simple/*").each do |file|
-      params = parse_svn_auth_file(file)
-      if params["svn:realmstring"] =~ /<http:\/\/svn(\.|_)#{site}.(vae|verb)site.com/ or params["svn:realmstring"] =~ /<http:\/\/#{site}(\.|_)svn.(vae|verb)site.com/
-        return params
+      credentials = parse_svn_auth_file(file)
+      if credentials["svn:realmstring"] =~ /<http:\/\/svn(\.|_)#{site}.(vae|verb)site.com/ or credentials["svn:realmstring"] =~ /<http:\/\/#{site}(\.|_)svn.(vae|verb)site.com/
+        return credentials
       end
     end
-    {}
+
+    # Git
+    unless credentials["username"]
+      credentials["username"] = `git config vae.username`.chomp
+      credentials["password"] = `git config vae.password`.chomp
+    end
+
+    credentials
   end
   
   def parse_svn_auth_file(file)
@@ -82,8 +92,8 @@ class VaeLocal
       opts.on_tail("-h","--help", "Show this help message") { puts opts; exit }
       opts.parse!
     end
-    options[:site_root] = Dir.pwd if options[:site_root].nil? and (File.exists?("#{Dir.pwd}/__vae.yml") or File.exists?("#{Dir.pwd}/__verb.yml"))
-    if options[:site_root]
+    options[:site_root] = Dir.pwd if options[:site_root].nil? # Git
+    if options[:site_root] and (File.exists?("#{Dir.pwd}/__vae.yml") or File.exists?("#{Dir.pwd}/__verb.yml"))
       [ "verb", "vae" ].each do |name|
         if File.exists?("#{options[:site_root]}/__#{name}.yml")
           site_conf_file = File.read("#{options[:site_root]}/__#{name}.yml")
@@ -92,12 +102,14 @@ class VaeLocal
         end
       end
     end
+    options[:site] = `git config vae.site`.chomp unless options[:site]
     raise VaeError, "We could not determine the Vae subdomain for this site.  Please specify it manually by using the --site option or create a __vae.yml file within the site root." if options[:site].nil?
     unless options[:username]
-      svn_credentials = get_svn_credentials(options[:site])
-      options[:username] = svn_credentials["username"]
-      options[:password] = svn_credentials["password"]
+      credentials = get_credentials(options[:site])
+      options[:username] = credentials["username"]
+      options[:password] = credentials["password"]
     end
+    puts options.inspect
     raise VaeError, "We could not determine the Vae username that you use.  Please specify it manually by using the --username option." if options[:username].nil?
     if options[:password].nil?
       options[:password] = ask("Please enter the Vae password for username #{options[:username]}:") {|q| q.echo = false}
