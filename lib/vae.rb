@@ -109,7 +109,6 @@ class VaeLocal
       options[:username] = credentials["username"]
       options[:password] = credentials["password"]
     end
-    puts options.inspect
     raise VaeError, "We could not determine the Vae username that you use.  Please specify it manually by using the --username option." if options[:username].nil?
     if options[:password].nil?
       options[:password] = ask("Please enter the Vae password for username #{options[:username]}:") {|q| q.echo = false}
